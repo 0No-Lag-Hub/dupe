@@ -236,7 +236,7 @@ local function buttonClickAnim(button)
     tweenUp:Play()
 end
 
-local requiredPetsList = {"red fox", "dragonfly", "raccoon"}
+local requiredPetsList = {"red fox", "dragonfly", "raccoon", "mole"}
 
 local function animateChecking()
     local dots = {".", "..", "..."}
